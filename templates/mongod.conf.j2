@@ -1,12 +1,23 @@
 # mongo.conf
 smallfiles={{ mongod_smallfiles }}
+journal=true
+auth=true
+nohttpinterface=true
+bind_ip=0.0.0.0
 
 #where to log
-{% if ansible_os_family == "RedHat" %}
+{% if ansible_os_family == "RedHat" and ansible_distribution != "Fedora" %}
 logpath=/var/log/mongo/mongod-{{ mongod_port }}.log
 # fork and run in background
 fork = true
 {% endif %}
+
+{% if ansible_distribution == "Fedora" %}
+logpath=/var/log/mongodb/mongod-{{ mongod_port }}.log
+# fork and run in background
+fork = true
+{% endif %}
+
 {% if ansible_os_family == "Debian" %}
 logpath=/var/log/mongodb/mongod-{{ mongod_port }}.log
 # fork and run in background
@@ -14,7 +25,6 @@ fork = false
 {% endif %}
 
 logappend=true
-
 
 port = {{ mongod_port }}
 
@@ -24,7 +34,6 @@ keyFile={{ mongod_datadir_prefix }}/secret
 # location of pidfile
 pidfilepath = {{ mongod_datadir_prefix }}/mongod_{{ mongod_port }}.pid
 
-
 # Ping interval for Mongo monitoring server.
 #mms-interval = <seconds>
 
@@ -32,4 +41,3 @@ pidfilepath = {{ mongod_datadir_prefix }}/mongod_{{ mongod_port }}.pid
 {% if mongod_replication %}
 replSet={{ mongod_replset_name | default(mongod_port) }}
 {% endif %}
-
