@@ -103,21 +103,25 @@
   when: ansible_distribution == "Fedora"
 
 - name: Check if local exception is active
-  command: /usr/bin/mongo --port "{{ mongod_port }}" -u "{{mongod_admin_user}}" -p "{{mongod_admin_pwd}}" --eval "quit();"
+  command: /usr/bin/mongo --port "{{ mongod_port }}" -u "{{mongod_admin_user}}" -p "{{mongod_admin_pwd}}" --authenticationDatabase admin --eval "quit();"
   register: mongodb_has_admin_user
   ignore_errors: true
 
-- name: Create admin user
-  mongodb_user: database="admin" name="{{mongod_admin_user}}" password="{{mongod_admin_pwd}}" roles="userAdminAnyDatabase,dbAdminAnyDatabase,clusterAdmin,readWriteAnyDatabase"  login_port="{{ mongod_port }}" state=present
-  when: mongodb_has_admin_user|failed
-
 - name: Create the file to initialize the mongod replica set
   template: src=repset_init.j2 dest=/tmp/repset_init.js
-  when: mongod_replication and mongod_repl_master == ansible_hostname
+  when: mongod_replication and mongod_repl_master == ansible_hostname and mongodb_has_admin_user|failed
 
 - name: Initialize the replication set
-  command: /usr/bin/mongo --port "{{ mongod_port }}" -u "{{mongod_admin_user}}" -p "{{mongod_admin_pwd}}" --authenticationDatabase admin /tmp/repset_init.js 
-  when: mongod_replication and mongod_repl_master == ansible_hostname
+  command: /usr/bin/mongo --port "{{ mongod_port }}" /tmp/repset_init.js 
+  when: mongod_replication and mongod_repl_master == ansible_hostname and mongodb_has_admin_user|failed
+
+- name: Create admin user
+  mongodb_user: database="admin" name="{{mongod_admin_user}}" password="{{mongod_admin_pwd}}" roles="userAdminAnyDatabase,dbAdminAnyDatabase,clusterAdmin,readWriteAnyDatabase"  login_port="{{ mongod_port }}" state=present
+  when: mongodb_has_admin_user|failed and mongod_repl_master == ansible_hostname and mongod_replication
+
+- name: Create admin user
+  mongodb_user: database="admin" name="{{mongod_admin_user}}" password="{{mongod_admin_pwd}}" roles="userAdminAnyDatabase,dbAdminAnyDatabase,clusterAdmin,readWriteAnyDatabase"  login_port="{{ mongod_port }}" state=present
+  when: mongodb_has_admin_user|failed and not mongod_replication
 
 - name: Create other users
   mongodb_user: database="{{item.db}}" name="{{item.name}}" password="{{item.pwd}}" roles="{{item.roles}}" login_port="{{ mongod_port }}" login_user="{{ mongod_admin_user }}"  login_password="{{mongod_admin_pwd}}" replica_set="{{mongod_replset_name}}" state=present
