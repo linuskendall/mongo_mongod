@@ -24,6 +24,9 @@ logpath=/var/log/mongodb/mongod-{{ mongod_port }}.log
 fork = false
 {% endif %}
 
+{% if mongod_verbose is defined and mongod_verbose %}
+verbose=true
+{% endif %}
 logappend=true
 
 port = {{ mongod_port }}
