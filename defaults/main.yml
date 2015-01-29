@@ -11,3 +11,8 @@ mongod_repl_servers: []
 mongod_repl_master: "localhost"
 mongod_replset_name: rs0
 mongod_verbose: false
+
+mongod_version: 2.6.7
+
+mongod_url: https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-{{ mongod_version }}.tgz
+mongod_binary_install: true

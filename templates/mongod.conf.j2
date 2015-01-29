@@ -42,5 +42,7 @@ pidfilepath = {{ mongod_datadir_prefix }}/mongod_{{ mongod_port }}.pid
 
 # Replication Options
 {% if mongod_replication %}
+  {% if ansible_hostname != mongod_repl_master %}
 replSet={{ mongod_replset_name | default(mongod_port) }}
+  {% endif %}
 {% endif %}

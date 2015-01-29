@@ -1,0 +1,95 @@
+# Package install
+- name: Install the apt key for ubuntu
+  apt_key: id=7F0CEB10 url="http://docs.mongodb.org/10gen-gpg-key.asc"
+  when: ansible_os_family == "Debian"
+
+- name: Install the python pycurl library
+  apt: name=python-pycurl state=installed update_cache=yes
+  when: ansible_os_family == "Debian"
+
+- name: Install the repository for Ubuntu mongodb
+  apt_repository: repo="deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen" state=present
+  when: ansible_os_family == "Debian"
+  
+- name: Install the libselinux module
+  yum: name=libselinux-python state=installed
+  when: ansible_os_family == "RedHat"
+
+- name: Create the repository for 10Gen
+  copy: src=10gen.repo dest=/etc/yum.repos.d/10gen.repo
+  when: ansible_os_family == "RedHat" and ansible_distribution != "Fedora"
+
+- name: Create the EPEL Repository.
+  copy: src=epel.repo dest=/etc/yum.repos.d/epel.repo
+  when: ansible_os_family == "RedHat" and ansible_distribution != "Fedora"
+
+- name: Install the mongodb package
+  yum: name={{ item }} state=installed
+  with_items: mongod_pkgs
+  when: ansible_os_family == "RedHat" and (mongod_binary_install is not defined or not mongod_binary_install)
+
+- name: Remove the mongodb package if opting for binary install
+  yum: name={{ item }} state=absent
+  with_items: mongod_pkgs
+  when: ansible_os_family == "RedHat" and mongod_binary_install is defined and mongod_binary_install and false 
+
+- name: Install the mongodb package
+  apt: name={{ item }} state=installed update_cache=yes
+  with_items: mongod_pkgs
+  when: ansible_os_family == "Debian" and (mongod_binary_install is not defined or not mongod_binary_install)
+
+- name: Remove mongodb pacage if option for binary install
+  apt: name={{ item }} state=absent
+  with_items: mongod_pkgs
+  when: ansible_os_family == "Debian" and mongod_binary_install is defined and mongod_binary_install and false
+
+# Binary install
+- name: Install ca-certificates
+  yum: name=ca-certificates state=present
+  when: ansible_os_family == "RedHat"
+
+- name: Install ca-certificates
+  apt: name=ca-certificates state=present
+  when: ansible_os_family == "Debian"
+
+- name: Install gandi certificate
+  copy: src=gandi.pem dest=/etc/ssl/certs/ owner=root mode=0644
+  when: mongod_binary_install is defined and mongod_binary_install
+
+- name: Download mongodb package
+  command: curl "{{ mongod_url }}" -o /var/cache/mongod-{{ mongod_version }}.tgz 
+  when: mongod_binary_install is defined and mongod_binary_install
+
+- name: Create installation directory
+  file: dest=/opt/mongod-{{ mongod_version }} state=directory 
+  when: mongod_binary_install is defined and mongod_binary_install
+
+- name: Extract mongodb package
+  unarchive: src=/var/cache/mongod-{{ mongod_version }}.tgz dest=/opt/ copy=no 
+  when: mongod_binary_install is defined and mongod_binary_install
+
+- name: Link latest version
+  file: src=/opt/mongodb-linux-x86_64-{{ mongod_version }} dest=/opt/mongod state=link
+  when: mongod_binary_install is defined and mongod_binary_install
+
+# Start up files
+- name: Create the mongodb startup file for Rhel
+  template: src=mongod.j2 dest=/etc/init.d/mongod-{{ mongod_port }} mode=0655
+  when: ansible_os_family == "RedHat" and ansible_distribution != "Fedora"
+
+- name: Create the mongodb startup file for Debian
+  template: src=mongod_debian_init.j2 dest=/etc/init/mongodb-{{ mongod_port }}.conf mode=0655
+  when: ansible_os_family == "Debian"
+
+- name: Create the mongodb startup file for Fedora
+  template: src=mongod.service.j2 dest=/usr/lib/systemd/system/mongod.service
+  when: ansible_distribution == "Fedora"
+
+- name: Create the mongodb configuration file
+  template: src=mongod.conf.j2 dest=/etc/mongod-{{ mongod_port }}.conf
+  when: ansible_distribution != "Fedora"
+
+- name: Create the mongodb configuration file
+  template: src=mongod.conf.j2 dest=/etc/mongodb.conf
+  notify: restart mongodb
+  when: ansible_distribution == "Fedora"
