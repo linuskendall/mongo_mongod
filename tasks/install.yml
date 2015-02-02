@@ -85,6 +85,10 @@
   template: src=mongod.service.j2 dest=/usr/lib/systemd/system/mongod.service
   when: ansible_distribution == "Fedora"
 
+- name: Create the mongodb startup file for Fedora
+  template: src=sysconfig.j2 dest=/etc/sysconfig/mongod
+  when: ansible_distribution == "Fedora"
+
 - name: Create the mongodb configuration file
   template: src=mongod.conf.j2 dest=/etc/mongod-{{ mongod_port }}.conf
   when: ansible_distribution != "Fedora"
