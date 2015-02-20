@@ -21,6 +21,19 @@
   command: systemctl daemon-reload
   when: ansible_distribution == "Fedora"
 
+- name: Create tmpfiles.d file
+  copy: content="d /var/run/mongodb 0755 mongodb mongodb" dest="/lib/tmpfiles.d/mongodb.conf"
+  when: ansible_distribution == "Fedora"
+
+- name: Run tmpfiled.d
+  command: systemd-tmpfiles --create mongodb.conf
+  when: ansible_distribution == "Fedora"
+
+- name: Create mongodb log dir
+  file: path="/var/log/mongodb" mode=0750 state=directory owner={{ mongo_user }} group={{ mongo_group }}
+  notify: restart mongodb
+  when: ansible_distribution == "Fedora"
+
 - name: Start the mongodb service for redhat variants
   command: creates=/var/lock/subsys/mongod-{{ mongod_port }} /etc/init.d/mongod-{{ mongod_port }} start
   when: ansible_os_family == "RedHat" and ansible_distribution != "Fedora"
@@ -42,11 +55,15 @@
 
 - name: Create the file to initialize the mongod replica set
   template: src=repset_init.j2 dest=/tmp/repset_init.js
-  when: mongod_replication and mongod_repl_master == ansible_hostname and mongodb_has_admin_user|failed
+  when: mongod_replication and mongod_repl_master == ansible_hostname #and mongodb_has_admin_user|failed
 
 - name: Initialize the replication set
   command: /usr/bin/mongo --port "{{ mongod_port }}" /tmp/repset_init.js 
   when: mongod_replication and mongod_repl_master == ansible_hostname and mongodb_has_admin_user|failed
+
+- name: Initialize the replication set
+  command: /usr/bin/mongo -u "{{mongod_admin_user}}" -p "{{mongod_admin_pwd}}" --authenticationDatabase admin --port "{{ mongod_port }}" /tmp/repset_init.js 
+  when: mongod_replication and mongod_repl_master == ansible_hostname and not mongodb_has_admin_user|failed
 
 - name: Create admin user
   mongodb_user: database="admin" name="{{mongod_admin_user}}" password="{{mongod_admin_pwd}}" roles="userAdminAnyDatabase,dbAdminAnyDatabase,clusterAdmin,readWriteAnyDatabase"  login_port="{{ mongod_port }}" state=present
@@ -66,6 +83,7 @@
   with_items: mongod_users
   tags:
     - mongo_users
+  ignore_errors: True # temporary ignore errors
 
 - name: Create other users
   mongodb_user: database="{{item.db}}" name="{{item.name}}" password="{{item.pwd}}" roles="{{item.roles}}" login_port="{{ mongod_port }}" login_user="{{ mongod_admin_user }}"  login_password="{{mongod_admin_pwd}}" state=present
@@ -73,6 +91,7 @@
   with_items: mongod_users
   tags:
     - mongo_users
+  ignore_errors: True # temporary ignore errors
 
 - name: Add admin user to all database
   mongodb_user: database="{{ item.db }}" name="admin" password="{{ mongod_admin_pwd }}" roles="userAdmin,readWrite"  login_port="{{ mongod_port }}" login_user="{{ item.name }}"  login_password="{{ item.pwd }}" replica_set="{{mongod_replset_name}}" state=present
@@ -81,6 +100,7 @@
   tags:
     - mongo_add_admin_priv
     - mongo_users
+  ignore_errors: True
 
 - name: Add admin user to all database
   mongodb_user: database="{{item.db}}" name="admin" password="{{mongod_admin_pwd}}" roles="userAdmin,readWrite" login_port="{{ mongod_port }}" login_user="{{ item.name }}" login_password="{{ item.pwd }}" state=present
@@ -89,3 +109,4 @@
   tags:
     - mongo_users
     - mongo_add_admin_priv
+  ignore_errors: True
