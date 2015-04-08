@@ -68,6 +68,9 @@
   unarchive: src=/var/cache/mongod-{{ mongod_version }}.tgz dest=/opt/ copy=no 
   when: mongod_binary_install is defined and mongod_binary_install
 
+- name: Set permissions
+  file: path=/opt/mongodb-linux-x86_64-{{ mongod_version }} owner=root group=root recurse=yes state=directory
+
 - name: Link latest version
   file: src=/opt/mongodb-linux-x86_64-{{ mongod_version }} dest=/opt/mongod state=link
   when: mongod_binary_install is defined and mongod_binary_install
