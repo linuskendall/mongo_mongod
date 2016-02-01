@@ -47,7 +47,7 @@
   when: ansible_distribution == "Fedora"
 
 - name: Check if local exception is active
-  command: /usr/bin/mongo --port "{{ mongod_port }}" -u "{{mongod_admin_user}}" -p "{{mongod_admin_pwd}}" --authenticationDatabase admin --eval "quit();"
+  command: /usr/bin/mongo --port "{{ mongod_port }}" -u "{{mongod_admin_user}}" -p "{{mongod_admin_pwd}}" --authenticationDatabase admin --eval "quit();"
   register: mongodb_has_admin_user
   ignore_errors: true
   tags:
@@ -94,7 +94,7 @@
   ignore_errors: True # temporary ignore errors
 
 - name: Add admin user to all database
-  mongodb_user: database="{{ item.db }}" name="admin" password="{{ mongod_admin_pwd }}" roles="userAdmin,readWrite"  login_port="{{ mongod_port }}" login_user="{{ item.name }}"  login_password="{{ item.pwd }}" replica_set="{{mongod_replset_name}}" state=present
+  mongodb_user: database="{{ item.db }}" name="admin" password="{{ mongod_admin_pwd }}" roles="userAdmin,readWrite"  login_port="{{ mongod_port }}" login_user="{{ item.name }}"  login_password="{{ item.pwd }}" replica_set="{{mongod_replset_name}}" state=present
   when: mongod_replication and mongod_repl_master == ansible_hostname 
   with_items: mongod_users
   tags:
