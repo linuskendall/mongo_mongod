@@ -29,6 +29,10 @@ verbose=true
 {% endif %}
 logappend=true
 
+{% if mongod_profiling is defined %}
+profile={{ mongod_profiling }}
+{% endif %}
+
 port = {{ mongod_port }}
 
 dbpath={{ mongod_datadir_prefix }}/mongo-{{ mongod_port }}
@@ -44,3 +48,4 @@ pidfilepath = {{ mongod_datadir_prefix }}/mongod_{{ mongod_port }}.pid
 {% if mongod_replication %}
 replSet={{ mongod_replset_name | default(mongod_port) }}
 {% endif %}
+

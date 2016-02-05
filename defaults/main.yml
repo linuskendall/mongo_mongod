@@ -11,6 +11,7 @@ mongod_repl_servers: []
 mongod_repl_master: "localhost"
 mongod_replset_name: rs0
 mongod_verbose: false
+mongod_profiling: 0
 
 mongod_version: 2.6.7
 
