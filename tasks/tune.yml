@@ -1,0 +1,12 @@
+- name: copy transparent hugepages
+  copy: src=disable-transparent-hugepages dest=/etc/init.d/disable-transparent-hugepages mode=0755
+
+- name: enable disable transparent hugepages
+  service: name=disable-transparent-hugepages enabled=yes state=started
+
+- name: set readahead values 
+  command: blockdev --setra 32 {{ mongod_blockdevice }}
+
+- name: copy ulimit settings
+  template: src=ulimit.conf.j2 dest=/etc/security/limits.d/99-mongodb-nproc.conf
+  notify: restart mongodb 
